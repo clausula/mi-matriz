@@ -1,0 +1,27 @@
+####Breed fraction
+
+#frac=matrix(NA, nrow=length(allAnimals),ncol=3, dimnames = list(allAnimals,lines))
+frac<-animals
+frac$P<-0
+frac$N<-0
+frac$Z<-0
+for (i in 1:dim(frac)[1]) {
+if(frac$line[i]=='PPPP') {frac$P[i]<-1}
+if(frac$line[i]=='NNNN') {frac$N[i]<-1}
+if(frac$line[i]=='ZZZZ') {frac$Z[i]<-1}
+if(frac$line[i]=='NNZZ') 
+  {
+  frac$N[i]<-0.5 
+  frac$Z[i]<-0.5
+  }
+if(frac$line[i]=="PPNZ") 
+  {
+  frac$P[i]<-0.5
+  frac$N[i]<-0.25
+  frac$Z[i]<-0.25
+  }
+}
+
+frac$line<-NULL
+write.table(frac, '60148_frac_breed.txt', sep=' ', row.names=F, col.names=F)
+
