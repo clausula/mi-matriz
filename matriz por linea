@@ -1,0 +1,86 @@
+lines<-c('P','N','Z')
+pLines<- c("PPPP","PPNZ")
+nLines <- c("NNNN","PPNZ")
+zLines <- c("ZZZZ","PPNZ")
+
+animals <- read.table(file = "60148_animal_origin.txt", header = FALSE, stringsAsFactors = FALSE, col.names = c("id","line"))
+for(line in c("PPPP","NNNN","ZZZZ","PPNZ")){animals$line[grep(pattern = line, animals$line)] <- line} 
+allAnimals <- animals$id
+pAnimals <- animals$id[animals$line%in%pLines]
+nAnimals <- animals$id[animals$line%in%nLines]
+zAnimals <- animals$id[animals$line%in%zLines]
+
+map <- read.table(file = "60148_chr_2_map.txt", header = TRUE, stringsAsFactors = FALSE)
+####Matrices by line
+arColumns<-map$snp
+require(Matrix)     
+
+load("alleleOrigin_C150to350_n18.Rdata")
+class(alleleOrigin)
+names(alleleOrigin)
+origin<-alleleOrigin$origins
+allele<-alleleOrigin$alleles
+
+load("alleleCounts_C150to350_n18.Rdata")
+class(alleleCounts)                ## alleleCounts is a sparse matrix, you need the package Matrix to use it
+head(summary(alleleCounts))
+alleleCounts[1:10,1:10]
+
+#####Animals using John trial run_chr2 results#######
+allAnimals<-rownames(alleleCounts)
+animalsSUB<-animals[animals$id %in% allAnimalsSUB]
+pAnimals <- animals$id[animals$line%in%pLines]
+nAnimals <- animals$id[animals$line%in%nLines]
+zAnimals <- animals$id[animals$line%in%zLines]
+
+#---------   replace "P" by 1, "N" by 2 and "Z" by 3 in the origin matrix -------------------#
+origin<-gsub("P", 1, origin, ignore.case = FALSE, fixed = FALSE)
+origin<-gsub("N", 2, origin, ignore.case = FALSE, fixed = FALSE)
+origin<-gsub("Z", 3, origin, ignore.case = FALSE, fixed = FALSE)
+
+#-- 3D matrix: 5=NA, 0=no allele from that line, 1=1 allele from that line, 2=2 alleles from that lines  --#
+C <- rep(5, length(allAnimals)*length(map)*3)   #5=NA
+ar<-array(C, dim=c(length(allAnimals),length(map$snp),3), dimnames = list(allAnimals,arColumns,lines))
+
+for(i in 1:length(allAnimals))  #animal position (2 rows per animal) #i=2
+#for(i in 1:3) 
+{
+ i1<-i*2-1     #position parent1 allele
+ i2<-i*2       #position parent2 allele
+ #for(j in 1:6) 
+ for(j in 1:nrow(map))          #snp position (columns)   #j=1
+ {
+  if (!is.na(allele[i1,j]))
+  {
+   l1<-as.numeric(origin[i1,j])  #line from parent1 allele
+   l2<-as.numeric(origin[i2,j])  #line from parent2 allele
+   ar[i,j,l1]<- allele[i1,j]
+    if (l1==l2)
+     {
+     ar[i,j,l1]<-as.numeric(ar[i,j,l1])+as.numeric(allele[i2,j])
+     }
+    else 
+     { 
+     ar[i,j,l2]<- as.numeric(allele[i2,j])
+     }
+   } 
+  else 
+   {
+   ar[i,j,1]<- 5
+   ar[i,j,2]<- 5
+   ar[i,j,3]<- 5
+   }
+ }
+}
+class(ar) <- "numeric"
+#----matrix by line----#
+arP<-ar[,,1]
+arN<-ar[,,2]
+arZ<-ar[,,3]
+arP <- arP[rownames(arP) %in% pAnimals, ]
+arN <- arP[rownames(arP) %in% nAnimals, ]
+arZ <- arP[rownames(arP) %in% zAnimals, ]
+
+write.table(arP, 'geno_lineP.txt', sep=' ', col.names=F, row.names=T)
+write.table(arN, 'geno_lineN.txt', sep=' ', col.names=F, row.names=T)
+write.table(arZ, 'geno_lineZ.txt', sep=' ', col.names=F, row.names=T)
